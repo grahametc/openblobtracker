@@ -1,2 +1,2 @@
-# visual-blob-tracking
+# openblobtracker
 blob-tracking effect from touchdesigner recreated in opencv
