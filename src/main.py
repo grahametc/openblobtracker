@@ -5,7 +5,7 @@ import argparse, math
 
 
 def tst():
-    cap = cv.VideoCapture("japan.mp4")
+    cap = cv.VideoCapture("skeleton2.mp4")
 
     if cap.isOpened():
         print("opened")
@@ -41,14 +41,16 @@ def tst():
             prev = (WIDTH // 2, HEIGHT // 2)   #middle of frame
             #prev = (lx, ly)     
             #               #lines originate from largest blob
-            seen = []
+            seen = set()
+            x_s=[] * len(contours)
+            y_s=[] * len(contours)
             for contour in contours:
-                
                 #print(contour)
                 area = cv.contourArea(contour)
-                if area > 1000 and area < 2000:
+                if area >= 1500 and area <= 2000:
                     cv.drawContours(frame, [contour], 0, (255, 255, 255), 1)    #-1 to fill
-                elif area < 1000:
+                    #opaque_overlay(frame, contour, (0,255,255))
+                elif area < 1500:
                     blobs+=1
                     x,y,w,h = cv.boundingRect(contour)
                     font_size = 1
@@ -60,15 +62,19 @@ def tst():
                     #    cv.line(frame, prev, (x, y), (255, 255, 255), 1)
                     #draw_trajectory(frame, history, id)
                     #prev = (x, y)
-                    if not history[id] or find_closest(history, x, y, seen) == -1:
+                    closest = find_closest(history, x, y, seen)
+                    if not history[id] or closest == -1:
                         id +=1 
                     else:
-                        id = find_closest(history, x, y, seen)
-                    seen.append(id)
+                        id = closest
+                    seen.add(id)
+                    x_s[id-1] = x
+                    y_s[id-1] = y
                    # print(f"seen: {seen}")
                     #print(f'id:{id}')
                     #overlay = frame.copy()
-                    invert_blob_color(frame, contour)
+                    #invert_blob_color(frame, contour)
+                    #blur_blob(frame, contour, (20, 20))
                     cv.rectangle(frame,(x,y),(x+w,y+h),(255,255,255),1)    #-1 for fill
                     cv.putText(frame, str(id), (x, y+20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), font_size)
                     #alpha = 1
@@ -131,14 +137,24 @@ def invert_blob_color(frame, contour):
     frame[y:y+h, x:x+w,:] = invrt
     
     
+def opaque_overlay(frame, contour, color):
+    alpha = 0.2
+    overlay = frame.copy()
+    cv.drawContours(overlay, [contour], 0, color, thickness=-1)
+    cv.addWeighted(overlay, alpha, frame, 1-alpha, 0, frame)
 
-
-def zoom_blob(contour):
+def zoom_blob(frame, contour, zoom_factor):
     return
 
 def connect_blobs(frame, contours):
     return
 
+
+def blur_blob(frame, contour, ksize):
+    x, y, w, h = cv.boundingRect(contour)
+    range = frame[y:y+h, x:x+w]
+    invrt = cv.blur(range, ksize)
+    frame[y:y+h, x:x+w,:] = invrt
 
 if __name__=="__main__":
    parser = argparse.ArgumentParser()
