@@ -5,7 +5,7 @@ import argparse, math
 
 
 def tst():
-    cap = cv.VideoCapture("skeleton2.mp4")
+    cap = cv.VideoCapture("japan.mp4")
 
     if cap.isOpened():
         print("opened")
@@ -42,8 +42,10 @@ def tst():
             #prev = (lx, ly)     
             #               #lines originate from largest blob
             seen = set()
-            x_s=[] * len(contours)
-            y_s=[] * len(contours)
+            xs=[0] * len(contours)
+            ys=[0] * len(contours)
+            print(xs)
+            print(ys)
             for contour in contours:
                 #print(contour)
                 area = cv.contourArea(contour)
@@ -68,8 +70,11 @@ def tst():
                     else:
                         id = closest
                     seen.add(id)
-                    x_s[id-1] = x
-                    y_s[id-1] = y
+                    print(f"id: {id} ")
+                    print(f"xs: {len(xs)}")
+                    if id > len(contours): id-=((id - len(contours))+1)
+                    xs[id-1] = x
+                    ys[id-1] = y
                    # print(f"seen: {seen}")
                     #print(f'id:{id}')
                     #overlay = frame.copy()
@@ -81,7 +86,8 @@ def tst():
                     #cv.addWeighted(overlay, alpha, frame, 1-alpha, 0, frame)
                     history.setdefault(id, ([]))
                     history.setdefault(id, ([])).append((x, y+(h//2)))
-                    #draw_trajectory(frame, history, id)       
+                    #draw_trajectory(frame, history, id)
+            connect_blobs(frame, contours, xs, ys)       
             output.write(frame)
         else:
             history = defaultdict(tuple)
@@ -146,8 +152,23 @@ def opaque_overlay(frame, contour, color):
 def zoom_blob(frame, contour, zoom_factor):
     return
 
-def connect_blobs(frame, contours):
+def connect_blobs(frame, contours, xs, ys):
+
+    distance_threshold = 599
+
+    for i in range(len(contours)):
+        for j in range(i+1, len(contours)):
+            dx = xs[j] - xs[i]
+            dy = ys[j] - ys[i]
+            dist = np.sqrt(dx*dx + dy*dy)
+
+            if dist < distance_threshold:
+                point1 = (xs[i], ys[i])
+                point2 = (xs[j], ys[j])
+
+                cv.line(frame, point1, point2, (255, 255, 255), 1, cv.LINE_4)
     return
+
 
 
 def blur_blob(frame, contour, ksize):
