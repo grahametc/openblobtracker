@@ -21,6 +21,7 @@ def tst():
     output = cv.VideoWriter("output.mp4", fourcc, FPS, (WIDTH, HEIGHT), isColor=True)
     history=defaultdict(tuple)
     frame_count=0
+    font = "neuropol.ttf"
     while True:
         ret, frame = cap.read()
         if not ret: break
@@ -44,8 +45,9 @@ def tst():
             seen = set()
             xs=[0] * len(contours)
             ys=[0] * len(contours)
-            print(xs)
-            print(ys)
+            #print(xs)
+            #print(ys)
+            blob_data = []
             for contour in contours:
                 #print(contour)
                 area = cv.contourArea(contour)
@@ -70,8 +72,8 @@ def tst():
                     else:
                         id = closest
                     seen.add(id)
-                    print(f"id: {id} ")
-                    print(f"xs: {len(xs)}")
+                    #print(f"id: {id} ")
+                    #print(f"xs: {len(xs)}")
                     if id > len(contours): id-=((id - len(contours))+1)
                     xs[id-1] = x
                     ys[id-1] = y
@@ -87,7 +89,10 @@ def tst():
                     history.setdefault(id, ([]))
                     history.setdefault(id, ([])).append((x, y+(h//2)))
                     #draw_trajectory(frame, history, id)
-            connect_blobs(frame, contours, xs, ys)       
+                    data = f"x:{x} y:{y} id:{id}"
+                    blob_data.append(data)
+            #connect_blobs(frame, contours, xs, ys)  
+            text_visuals(frame, blob_data)     
             output.write(frame)
         else:
             history = defaultdict(tuple)
@@ -170,12 +175,21 @@ def connect_blobs(frame, contours, xs, ys):
     return
 
 
-
 def blur_blob(frame, contour, ksize):
     x, y, w, h = cv.boundingRect(contour)
     range = frame[y:y+h, x:x+w]
     invrt = cv.blur(range, ksize)
     frame[y:y+h, x:x+w,:] = invrt
+
+
+def text_visuals(frame, data):
+    txt = ""
+    y = 20
+    for d in data:
+        cv.putText(frame, d, (10, y), cv.FONT_HERSHEY_SIMPLEX,0.5, (255, 255, 255), 1)
+        y+=20
+
+
 
 if __name__=="__main__":
    parser = argparse.ArgumentParser()
