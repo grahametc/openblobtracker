@@ -5,7 +5,7 @@ import argparse, math
 
 
 def tst():
-    cap = cv.VideoCapture("japan.mp4")
+    cap = cv.VideoCapture("volcano.mp4")
 
     if cap.isOpened():
         print("opened")
@@ -54,7 +54,7 @@ def tst():
                 if area >= 1500 and area <= 2000:
                     cv.drawContours(frame, [contour], 0, (255, 255, 255), 1)    #-1 to fill
                     #opaque_overlay(frame, contour, (0,255,255))
-                elif area < 1500:
+                elif area <= 3000:
                     blobs+=1
                     x,y,w,h = cv.boundingRect(contour)
                     font_size = 1
@@ -75,24 +75,26 @@ def tst():
                     #print(f"id: {id} ")
                     #print(f"xs: {len(xs)}")
                     if id > len(contours): id-=((id - len(contours))+1)
-                    xs[id-1] = x
-                    ys[id-1] = y
+                    xs[id-1] = x + (w // 2)
+                    ys[id-1] = y + (h // 2)
                    # print(f"seen: {seen}")
                     #print(f'id:{id}')
                     #overlay = frame.copy()
                     #invert_blob_color(frame, contour)
                     #blur_blob(frame, contour, (20, 20))
                     cv.rectangle(frame,(x,y),(x+w,y+h),(255,255,255),1)    #-1 for fill
-                    cv.putText(frame, str(id), (x, y+20), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), font_size)
+                    cv.putText(frame, str(id), ((x+w), y+(h//2)), cv.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), font_size)
                     #alpha = 1
                     #cv.addWeighted(overlay, alpha, frame, 1-alpha, 0, frame)
                     history.setdefault(id, ([]))
-                    history.setdefault(id, ([])).append((x, y+(h//2)))
+                    history.setdefault(id, ([])).append((x, y+(h//2))) 
                     #draw_trajectory(frame, history, id)
                     data = f"x:{x} y:{y} id:{id}"
-                    blob_data.append(data)
+                    blob_data.append(data) 
             #connect_blobs(frame, contours, xs, ys)  
-            text_visuals(frame, blob_data)     
+            #text_visuals(frame, blob_data, (0, 0, 255), HEIGHT)
+            #blur_blob(frame, contour, (50,50))
+            connect_blobs(frame, contours, xs, ys, (0, 0, 255))     
             output.write(frame)
         else:
             history = defaultdict(tuple)
@@ -157,9 +159,9 @@ def opaque_overlay(frame, contour, color):
 def zoom_blob(frame, contour, zoom_factor):
     return
 
-def connect_blobs(frame, contours, xs, ys):
-
-    distance_threshold = 599
+def connect_blobs(frame, contours, xs, ys, color):
+ 
+    distance_threshold = 149
 
     for i in range(len(contours)):
         for j in range(i+1, len(contours)):
@@ -171,7 +173,7 @@ def connect_blobs(frame, contours, xs, ys):
                 point1 = (xs[i], ys[i])
                 point2 = (xs[j], ys[j])
 
-                cv.line(frame, point1, point2, (255, 255, 255), 1, cv.LINE_4)
+                cv.line(frame, point1, point2, color, 1, cv.LINE_4)
     return
 
 
@@ -182,14 +184,16 @@ def blur_blob(frame, contour, ksize):
     frame[y:y+h, x:x+w,:] = invrt
 
 
-def text_visuals(frame, data):
-    txt = ""
+def text_visuals(frame, data, color, height):
     y = 20
     for d in data:
-        cv.putText(frame, d, (10, y), cv.FONT_HERSHEY_SIMPLEX,0.5, (255, 255, 255), 1)
+        cv.putText(frame, d, (10, y), cv.FONT_HERSHEY_SIMPLEX,0.5, color, 1)
         y+=20
+        if y >= height:
+            break
 
-
+def curved_lines(frame):
+    return
 
 if __name__=="__main__":
    parser = argparse.ArgumentParser()
