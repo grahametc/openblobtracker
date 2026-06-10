@@ -5,7 +5,7 @@ import argparse, math
 
 
 def tst():
-    cap = cv.VideoCapture("volcano.mp4")
+    cap = cv.VideoCapture("motorcycle.mp4")
 
     if cap.isOpened():
         print("opened")
@@ -43,8 +43,15 @@ def tst():
             #prev = (lx, ly)     
             #               #lines originate from largest blob
             seen = set()
-            xs=[0] * len(contours)
-            ys=[0] * len(contours)
+            #print(history)
+            max_length = len(contours)
+            if len(history) == 0 or len(contours) > max(history):
+                max_length = len(contours)
+            else:
+                max_length=max(history)
+            xs=[0] * max_length
+            ys=[0] * max_length
+            #print(len(contours))
             #print(xs)
             #print(ys)
             blob_data = []
@@ -74,7 +81,11 @@ def tst():
                     seen.add(id)
                     #print(f"id: {id} ")
                     #print(f"xs: {len(xs)}")
-                    if id > len(contours): id-=((id - len(contours))+1)
+                    if id > len(xs): 
+                       xs.append(0)
+                       ys.append(0)
+                    #print(f"id: {id}")
+                    #print(f"xs: {len(xs)}")
                     xs[id-1] = x + (w // 2)
                     ys[id-1] = y + (h // 2)
                    # print(f"seen: {seen}")
@@ -94,7 +105,7 @@ def tst():
             #connect_blobs(frame, contours, xs, ys)  
             #text_visuals(frame, blob_data, (0, 0, 255), HEIGHT)
             #blur_blob(frame, contour, (50,50))
-            connect_blobs(frame, contours, xs, ys, (0, 0, 255))     
+            #connect_blobs(frame, contours, xs, ys, (255, 255, 255))     
             output.write(frame)
         else:
             history = defaultdict(tuple)
@@ -165,6 +176,7 @@ def connect_blobs(frame, contours, xs, ys, color):
 
     for i in range(len(contours)):
         for j in range(i+1, len(contours)):
+            if xs[i] == 0 or ys[i] == 0: continue
             dx = xs[j] - xs[i]
             dy = ys[j] - ys[i]
             dist = np.sqrt(dx*dx + dy*dy)
