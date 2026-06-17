@@ -4,8 +4,8 @@ from collections import defaultdict
 import argparse, math
 
 
-def tst():
-    cap = cv.VideoCapture("motorcycle.mp4")
+def tst(input):
+    cap = cv.VideoCapture(input)
 
     if cap.isOpened():
         print("opened")
@@ -209,4 +209,6 @@ def curved_lines(frame):
 
 if __name__=="__main__":
    parser = argparse.ArgumentParser()
-   tst()
+   parser.add_argument("-input", "-input", required = True)
+   args = parser.parse_args()
+   tst(args.input)
