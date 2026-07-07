@@ -4,7 +4,7 @@ from collections import defaultdict
 import argparse, math
 
 
-def main(input, thresh, color, fill, text, text_color, con, con_color, con_thresh, txt_visuals, tv_color, invert, blur, blur_amt):
+def main(input, thresh, color, fill, text, text_color, con, con_color, con_thresh, txt_visuals, tv_color, invert, blur, blur_amt, max_blobs):
     cap = cv.VideoCapture(input)
 
     if cap.isOpened():
@@ -44,6 +44,7 @@ def main(input, thresh, color, fill, text, text_color, con, con_color, con_thres
             xs=[0] * max_length
             ys=[0] * max_length
             blob_data = []   
+            if(len(contours) > max_blobs): contours = contours[0:max_blobs]
             for contour in contours:
                 area = cv.contourArea(contour)
                 x,y,w,h = cv.boundingRect(contour)
@@ -56,7 +57,7 @@ def main(input, thresh, color, fill, text, text_color, con, con_color, con_thres
                 if id > len(xs): 
                     xs.append(0)
                     ys.append(0)
-                cv.rectangle(frame,(x,y),(x+w,y+h),(255,255,255),1)    #-1 for fill
+                cv.rectangle(frame,(x,y),(x+w,y+h), color, fill)    #-1 for fill
                 if text:
                      cv.putText(frame, str(id), ((x+w), y+(h//2)), cv.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
                 history.setdefault(id, ([]))
@@ -68,7 +69,7 @@ def main(input, thresh, color, fill, text, text_color, con, con_color, con_thres
                 data = f"x:{x} y:{y} id:{id}"
                 blob_data.append(data)    
             if con:
-                connect_blobs(frame, contours, xs, ys, con_color)
+                connect_blobs(frame, contours, xs, ys, con_color, con_thresh)
             if txt_visuals:
                 text_visuals(frame, blob_data, text_color, HEIGHT)
         output.write(frame)
@@ -135,9 +136,7 @@ def opaque_overlay(frame, contour, color):
 def zoom_blob(frame, contour, zoom_factor):
     return
 
-def connect_blobs(frame, contours, xs, ys, color):
- 
-    distance_threshold = 149
+def connect_blobs(frame, contours, xs, ys, color, thresh):
 
     for i in range(len(contours)):
         for j in range(i+1, len(contours)):
@@ -146,7 +145,7 @@ def connect_blobs(frame, contours, xs, ys, color):
             dy = ys[j] - ys[i]
             dist = np.sqrt(dx*dx + dy*dy)
 
-            if dist < distance_threshold:
+            if dist < thresh:
                 point1 = (xs[i], ys[i])
                 point2 = (xs[j], ys[j])
 
@@ -174,6 +173,25 @@ def curved_lines(frame):
 
 if __name__=="__main__":
    parser = argparse.ArgumentParser()
-   parser.add_argument("-input", "-input", required = True)
+   parser.add_argument("--input", required = True, help="input video file, will be written to output.mp4. example usage: --input file.mp4")
+   parser.add_argument("--thresh", default = 0, help="area threshold to recognize a blob. example usage: --thresh")
+   parser.add_argument("--blob_color", default = (255,255,255), nargs = 3, help="BGR format blob marking rectangle color . example usage: --blob_color 255 255 255")
+   parser.add_argument("--fill", default = 1, help="rectangle fill (1 for no fill, -1 to fill). example usage: --fill 1")
+   parser.add_argument("--txt", default = True, action = 'store_true',help="display information next to blobs")
+   parser.add_argument("--txt_col", default = (255,255,255), nargs = 3, help="BGR format color of text. example usage")
+   parser.add_argument("--connections", action = 'store_true', default = True, help="draw connection networks between blobs")
+   parser.add_argument("--con_color", default = (255, 255, 255), nargs = 3, help="BGR format color of connection lines. example usage: --con_color 255 255 255") 
+   parser.add_argument("--con_thresh", default = 200, help="pixel distance threshold for drawing connection lines. example usage: --con_thresh 200")
+   parser.add_argument("--txt_visuals", action = 'store_true', default = False, help="add text visuals in top left of screen")
+   parser.add_argument("--tv_color", default = (255, 255, 255), nargs = 3, help="BGR format text color for text visuals. example usage: --tv_color 255 255 255")
+   parser.add_argument("--invert", default = False, action = 'store_true', help="invert color within blobs")
+   parser.add_argument("--blur", default = False, action = 'store_true', help="blur blobs")
+   parser.add_argument("--blur_amt", default = (10,10), nargs = 2, help = "(blur kernel size. larger ksize = stronger blur). example usage: --blur_amt 10 10")
+   parser.add_argument("--max_blobs", default = 2147483647, help="maximum amount of blobs per frame")
    args = parser.parse_args()
-   main(args.input, 0, (255,255,255), 1, True, (255, 255, 255), True, (255,255,255), 200, False, (255, 255, 255), False, False, (10, 10))
+
+   args.color = tuple(args.blob_color)
+   args.txt_color = tuple(args.txt_col)
+   args.connections_color = tuple(args.con_color)
+   args.blur_amt = tuple(args.blur_amt)    
+   main(args.input, args.thresh, args.blob_color, args.fill, args.txt, args.txt_col, args.connections, args.con_color, args.con_thresh, args.txt_visuals, args.tv_color, args.invert, args.blur, args.blur_amt, args.max_blobs)
