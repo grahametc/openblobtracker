@@ -4,7 +4,7 @@ from collections import defaultdict
 import argparse, math
 
 
-def main(input, thresh, color, fill, text, text_color, con, con_color, con_thresh, txt_visuals, tv_color, invert, blur, blur_amt, max_blobs):
+def main(input, lower_thresh, upper_thresh, color, fill, text, text_color, con, con_color, con_thresh, txt_visuals, tv_color, invert, blur, blur_amt, max_blobs):
     cap = cv.VideoCapture(input)
 
     if cap.isOpened():
@@ -31,8 +31,8 @@ def main(input, thresh, color, fill, text, text_color, con, con_color, con_thres
         _, binary = cv.threshold(gray, 127, 255, cv.THRESH_BINARY)
         (all_contours, hierarchy) = cv.findContours(binary, cv.RETR_EXTERNAL,cv.CHAIN_APPROX_SIMPLE)
         if len(all_contours)>0:
-            threshold = thresh
-            contours = [x for x in all_contours if cv.contourArea(x) > threshold]
+            lower_thresh
+            contours = [x for x in all_contours if cv.contourArea(x) > lower_thresh and cv.contourArea(x) < upper_thresh]
             srt = sorted(contours, key = cv.contourArea) 
             id = 0
             seen = set()
@@ -58,8 +58,12 @@ def main(input, thresh, color, fill, text, text_color, con, con_color, con_thres
                     xs.append(0)
                     ys.append(0)
                 cv.rectangle(frame,(x,y),(x+w,y+h), color, fill)    #-1 for fill
-                if text:
-                     cv.putText(frame, str(id), ((x+w), y+(h//2)), cv.FONT_HERSHEY_SIMPLEX, 0.5, text_color, 1)
+                if text == 0:
+                     cv.putText(frame, str(id), ((x+(w//2)), y+((h//2)+h)), cv.FONT_HERSHEY_SIMPLEX, 0.4, text_color, 1)
+                if text == 1:
+                     cv.putText(frame, f"x: {x}", (x, y+h+10), cv.FONT_HERSHEY_SIMPLEX, 0.4, text_color, 1)
+                     cv.putText(frame, f"y: {y}", (x, y+h+20), cv.FONT_HERSHEY_SIMPLEX, 0.4, text_color, 1)
+                         
                 history.setdefault(id, ([]))
                 history.setdefault(id, ([])).append((x, y+(h//2)))
                 if invert:
@@ -174,24 +178,32 @@ def curved_lines(frame):
 if __name__=="__main__":
    parser = argparse.ArgumentParser()
    parser.add_argument("--input", required = True, help="input video file, will be written to output.mp4. example usage: --input file.mp4")
-   parser.add_argument("--thresh", default = 0, help="area threshold to recognize a blob. example usage: --thresh")
-   parser.add_argument("--blob_color", default = (255,255,255), nargs = 3, help="BGR format blob marking rectangle color . example usage: --blob_color 255 255 255")
+   parser.add_argument("--lower_thresh", default = 0, help="area threshold to recognize a blob. example usage: --thresh", type = int)
+   parser.add_argument("--upper_thresh", default = 2147483647, help="area threshold to recognize a blob. example usage: --thresh", type = int)
+   parser.add_argument("--blob_color", default = (255,255,255), nargs = 3, help="BGR format blob marking rectangle color . example usage: --blob_color 255 255 255", type = int)
    parser.add_argument("--fill", default = 1, help="rectangle fill (1 for no fill, -1 to fill). example usage: --fill 1")
-   parser.add_argument("--txt", default = True, action = 'store_true',help="display information next to blobs")
-   parser.add_argument("--txt_col", default = (255,255,255), nargs = 3, help="BGR format color of text. example usage")
+   parser.add_argument("--txt_id", default = False, action = 'store_true',help="display information next to blobs (id)")
+   parser.add_argument("--txt_xy", default = True, action = 'store_true',help="display information next to blobs (coordinates)")
+   parser.add_argument("--txt_col", default = (255,255,255), nargs = 3, help="BGR format color of text. example usage", type = int)
    parser.add_argument("--connections", action = 'store_true', default = True, help="draw connection networks between blobs")
-   parser.add_argument("--con_color", default = (255, 255, 255), nargs = 3, help="BGR format color of connection lines. example usage: --con_color 255 255 255") 
-   parser.add_argument("--con_thresh", default = 200, help="pixel distance threshold for drawing connection lines. example usage: --con_thresh 200")
+   parser.add_argument("--con_color", default = (255, 255, 255), nargs = 3, help="BGR format color of connection lines. example usage: --con_color 255 255 255", type = int) 
+   parser.add_argument("--con_thresh", default = 200, help="pixel distance threshold for drawing connection lines. example usage: --con_thresh 200", type = int)
    parser.add_argument("--txt_visuals", action = 'store_true', default = False, help="add text visuals in top left of screen")
-   parser.add_argument("--tv_color", default = (255, 255, 255), nargs = 3, help="BGR format text color for text visuals. example usage: --tv_color 255 255 255")
+   parser.add_argument("--tv_color", default = (255, 255, 255), nargs = 3, help="BGR format text color for text visuals. example usage: --tv_color 255 255 255", type = int)
    parser.add_argument("--invert", default = False, action = 'store_true', help="invert color within blobs")
    parser.add_argument("--blur", default = False, action = 'store_true', help="blur blobs")
-   parser.add_argument("--blur_amt", default = (10,10), nargs = 2, help = "(blur kernel size. larger ksize = stronger blur). example usage: --blur_amt 10 10")
-   parser.add_argument("--max_blobs", default = 2147483647, help="maximum amount of blobs per frame")
+   parser.add_argument("--blur_amt", default = (10,10), nargs = 2, help = "(blur kernel size. larger ksize = stronger blur). example usage: --blur_amt 10 10", type = int)
+   parser.add_argument("--max_blobs", default = 2147483647, help="maximum amount of blobs per frame", type = int)
    args = parser.parse_args()
 
-   args.color = tuple(args.blob_color)
+   args.blob_color = tuple(args.blob_color)
+   print(args.blob_color)
    args.txt_color = tuple(args.txt_col)
    args.connections_color = tuple(args.con_color)
-   args.blur_amt = tuple(args.blur_amt)    
-   main(args.input, args.thresh, args.blob_color, args.fill, args.txt, args.txt_col, args.connections, args.con_color, args.con_thresh, args.txt_visuals, args.tv_color, args.invert, args.blur, args.blur_amt, args.max_blobs)
+   args.blur_amt = tuple(args.blur_amt)
+   txt = -1 
+   if args.txt_id:
+       txt = 0
+   elif args.txt_xy:
+       txt = 1      
+   main(args.input, args.lower_thresh, args.upper_thresh, args.blob_color, args.fill, txt, args.txt_col, args.connections, args.con_color, args.con_thresh, args.txt_visuals, args.tv_color, args.invert, args.blur, args.blur_amt, args.max_blobs)
